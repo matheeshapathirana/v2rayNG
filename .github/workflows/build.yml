@@ -64,21 +64,23 @@ jobs:
       run: |
         cp -r ${{ github.workspace }}/libs ${{ github.workspace }}/V2rayNG/app
 
-    - name: Fetch AndroidLibXrayLite tag
-      run: |
-        pushd AndroidLibXrayLite
-        CURRENT_TAG=$(git describe --tags --abbrev=0)
-        echo "Current tag in this repo: $CURRENT_TAG"
-        echo "CURRENT_TAG=$CURRENT_TAG" >> $GITHUB_ENV
-        popd
-
-    - name: Download libv2ray
-      uses: robinraju/release-downloader@v1.13
+    # libv2ray.aar is built here instead of downloaded: it bundles Xray-core with the
+    # allowInsecure patch from xray-custom/ (see xray-custom/README.md).
+    - name: Setup Golang
+      uses: actions/setup-go@v6
       with:
-        repository: '2dust/AndroidLibXrayLite'
-        tag: ${{ env.CURRENT_TAG }}
-        fileName: 'libv2ray.aar'
-        out-file-path: V2rayNG/app/libs/
+        go-version-file: 'AndroidLibXrayLite/go.mod'
+        cache: false
+
+    - name: Install gomobile
+      run: |
+        go install golang.org/x/mobile/cmd/gomobile@latest
+        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
+    - name: Build patched libv2ray
+      run: |
+        command -v jq || sudo apt-get install -y jq
+        ANDROID_NDK_HOME=$NDK_HOME bash xray-custom/build-libv2ray.sh V2rayNG/app/libs
 
     - name: Setup Java
       uses: actions/setup-java@v6.3.0
@@ -92,6 +94,18 @@ jobs:
       with:
         fileName: "android_keystore.jks"
         encodedString: ${{ secrets.APP_KEYSTORE_BASE64 }}
+
+    # The in-app update check compares the release tag with versionName, so a release build
+    # takes its versionName from the tag (numbers and dots only, e.g. 2.4.1.1).
+    - name: Set versionName from release tag
+      if: inputs.release_tag != ''
+      env:
+        RELEASE_TAG: ${{ inputs.release_tag }}
+      run: |
+        VERSION="${RELEASE_TAG#v}"
+        [[ "$VERSION" =~ ^[0-9]+(\.[0-9]+)*$ ]] || { echo "release_tag must look like 2.4.1.1"; exit 1; }
+        sed -i "s/versionName = \".*\"/versionName = \"$VERSION\"/" V2rayNG/app/build.gradle.kts
+        grep -n 'versionName =' V2rayNG/app/build.gradle.kts
 
     - name: Build APK
       run: |
@@ -159,4 +173,5 @@ jobs:
           file: release-files/*
           tag: ${{ inputs.release_tag }}
           file_glob: true
-          prerelease: true
+          # Not a pre-release, so the app's default update check (releases/latest) finds it.
+          prerelease: false
