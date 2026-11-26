@@ -11,13 +11,40 @@ A V2Ray client for Android, support [Xray core](https://github.com/XTLS/Xray-cor
 
 ---
 
+## About this fork
+
+This fork of [2dust/v2rayNG](https://github.com/2dust/v2rayNG) brings back the TLS **Allow Insecure** option.
+
+Xray-core dropped `allowInsecure`, so nodes with Allow Insecure turned on stopped connecting. This fork builds `libv2ray.aar` itself from Xray-core with that option patched back in. The patch, the Xray-core version and the build script are in [`xray-custom/`](xray-custom/README.md).
+
+Other changes from upstream:
+
+- The in-app update check reads this fork's [releases](https://github.com/matheeshapathirana/v2rayNG/releases), not upstream's.
+- CI builds the patched AAR from the `AndroidLibXrayLite` submodule instead of downloading the upstream release.
+
+> [!WARNING]
+> Allow Insecure turns off server certificate checks, which leaves the connection open to man-in-the-middle attacks. Use certificate pinning where you can.
+
+> [!IMPORTANT]
+> Fork releases are signed with a different key from the official ones, so Android won't install them over the official app. Export your servers, uninstall the official v2rayNG, install the fork's APK, then import your servers again.
+
+### Making a release
+
+Run the **Build APK** workflow (`.github/workflows/build.yml`) by hand and fill in `release_tag`, for example `2.4.1.2`. The workflow sets `versionName` from the tag, signs the APKs and publishes a normal (not pre-release) GitHub release. Pushes to `master` build APKs but never publish a release.
+
+The update check only offers a release whose tag is higher than the installed version, so each new tag must go up.
+
+---
+
 ## Download / 下载
 
 Download the latest release here:
 
 在这里下载最新版本：
 
-[https://github.com/2dust/v2rayNG/releases](https://github.com/2dust/v2rayNG/releases)
+[https://github.com/matheeshapathirana/v2rayNG/releases](https://github.com/matheeshapathirana/v2rayNG/releases)
+
+Official upstream releases / 官方版本：[https://github.com/2dust/v2rayNG/releases](https://github.com/2dust/v2rayNG/releases)
 
 > [!TIP]
 > v2rayNG is the mobile version. For the desktop version, please visit the v2rayN \
@@ -52,6 +79,7 @@ More in our [wiki](https://github.com/2dust/v2rayNG/wiki)
 ### Note
 
 - Android project under the V2rayNG folder can be compiled directly in Android Studio, or using the Gradle wrapper. But the v2ray core inside the aar is (probably) outdated.
+- In this fork, build the patched aar with `xray-custom/build-libv2ray.sh <out-dir>` (needs Go, gomobile and the Android NDK). See [`xray-custom/README.md`](xray-custom/README.md).
 - The aar can be compiled from the Golang project [AndroidLibV2rayLite](https://github.com/2dust/AndroidLibV2rayLite) or [AndroidLibXrayLite](https://github.com/2dust/AndroidLibXrayLite). For a quick start, read the guides for [Go Mobile](https://github.com/golang/go/wiki/Mobile) and [Makefiles for Go Developers](https://tutorialedge.net/golang/makefiles-for-go-developers/).
 - v2rayNG can run on Android Emulators. For WSA, VPN permission needs to be granted via `appops set [package name] ACTIVATE_VPN allow`.
 
@@ -69,6 +97,8 @@ More in our [wiki](https://github.com/2dust/v2rayNG/wiki)
 Release files are signed with GPG to verify authenticity and integrity, helping prevent mirror, ISP, or CDN hijacking.
 
 发布文件已使用 GPG 签名，可用于校验文件真实性与完整性，预防镜像站、运营商或 CDN 劫持。
+
+This fork's releases are signed with the fork's own key. Check them with the `v2rayN-public-key.asc` attached to each fork release. The fingerprint below is for the official upstream releases.
 
 ### Fingerprint / 公钥指纹
 
